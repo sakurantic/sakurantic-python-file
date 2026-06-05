@@ -1,0 +1,38 @@
+{
+  "case_name": "clustering_case",
+  "model_name": "KMeans",
+  "scoring": "silhouette",
+  "best_score": 0.2848589191898987,
+  "best_params": {
+    "init": "k-means++",
+    "max_iter": 100,
+    "n_clusters": 3,
+    "n_init": 10
+  },
+  "n_samples": 178,
+  "n_features_raw": 13,
+  "n_features_processed": 13,
+  "numeric_cols": [
+    "Alcohol",
+    "Malic acid",
+    "Ash",
+    "Alcalinity of ash",
+    "Magnesium",
+    "Total phenols",
+    "Flavanoids",
+    "Nonflavanoid phenols",
+    "Proanthocyanins",
+    "Color intensity",
+    "Hue",
+    "OD280/OD315 of diluted wines",
+    "Proline"
+  ],
+  "categorical_cols": [],
+  "auto_dropped_cols": [],
+  "user_dropped_cols": [],
+  "n_clusters_found": 3.0,
+  "inertia": 1277.928488844642,
+  "silhouette": 0.2848589191898987,
+  "davies_bouldin": 1.389187977718165,
+  "calinski_harabasz": 70.94000800315118
+}
