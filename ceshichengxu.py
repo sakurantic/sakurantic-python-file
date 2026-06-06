@@ -21,7 +21,7 @@
 #notx\ ifx=false notx=true 反之亦然
 #a=12;b=24
 #print(a and b,a or b,not a,not b)
-#@@位运算符
+#位运算符
 #成员运算符  in 或者not in 身份运算 is或者not is
 #print(3.002//3.1) 结果：0.0
 #print(type(1),type("a"),type(1.2)) 用type判断数值类型
@@ -330,61 +330,98 @@
 #
 import random
 
-a = 0          # 保底计数（已抽数）
-b = 0          # 大保底标记，1 表示下一抽必出 UP
-up_times = 0   # 累计 UP 次数
-down_times = 0 # 累计歪的次数
-total = 0      # 累计总抽数
+a = 0  # 保底计数（已抽数）
+b = 0  # 大保底标记，1 表示下一抽必出 UP
+up_times = 0  # 累计 UP 次数
+down_times = 0  # 累计歪的次数
+total = 0  # 累计总抽数（包含了所有歪和大保底的抽数）
+
+# 新增：捕获明光所需的“连续歪小保底”计数器
+lose_streak = 0
+
 
 def posb():
-    """判断是否歪，返回 1（歪）或 2（UP）"""
-    global b
-    if b == 1:               # 大保底直接出 UP
+    """判断出金结果（严谨模拟捕获明光机制）"""
+    global b, lose_streak
+
+    # 1. 如果手里有大保底，100% 出 UP
+    # 注意：消耗大保底不属于“小保底判定”，不触发也不重置明光计数器
+    if b == 1:
         b = 0
         return 2
-    if random.randint(1, 2) == 1:   # 50% 歪
-        b = 1
-        return 1
+
+    # 2. 如果是小保底，根据【连续歪小保底的次数】决定本次胜率
+    # 这里的概率基于大数据逆向的明光递增模型
+    if lose_streak == 0:
+        win_rate = 0.504  # 第一次小保底，综合微幅提升
+    elif lose_streak == 1:
+        win_rate = 0.714  # 连续第二次小保底，胜率大增
+    elif lose_streak == 2:
+        win_rate = 0.918  # 连续第三次小保底，胜率极高
     else:
+        win_rate = 1.000  # 连续第四次小保底，100% 保底（触发明光）
+
+    # 掷骰子决定是否拿到 UP
+    if random.random() < win_rate:
+        # 成功拿到 UP（无论是自己赢的还是被明光救回来的）
         b = 0
+        lose_streak = 0  # 拿到 UP 后，连歪计数器清零
         return 2
+    else:
+        # 还是歪了
+        b = 1  # 下一次变成大保底
+        lose_streak += 1  # 连歪层数 +1
+        return 1
+
 
 def posa():
     """单抽，返回 0(没出)、1(歪)、2(UP)"""
     global a
     a += 1
-    if a == 90:               # 硬保底
+    if a == 90:  # 硬保底
         return posb()
 
-    if a <= 73:               # 73 抽及以前，基础概率 0.6%
-        if random.randint(1, 1000) <= 6:
+    if a <= 73:  # 73 抽及以前，基础概率 0.6%
+        if random.random() < 0.006:
             return posb()
-    else:                     # 74 抽开始概率线性递增
-        prob = 6 + 60 * (a - 73)
-        if random.randint(1, 1000) <= prob:
+    else:  # 74 抽开始概率线性递增
+        # 74抽开始，每抽增加 6% 概率
+        prob = 0.006 + 0.06 * (a - 73)
+        if random.random() < prob:
             return posb()
     return 0
+
 
 def one_trial():
     """进行一次试验：一直抽直到出一个五星"""
     global a, b, up_times, down_times, total
-    a = 0   # 重置保底计数，大保底标记 b 跨试验继承
+    a = 0  # 重置当前出金所需的抽数
     while True:
         result = posa()
-        if result == 2:         # UP
+        if result == 2:  # 出了 UP
             up_times += 1
-            total += a
+            total += a  # 累加抽数
             break
-        elif result == 1:       # 歪
+        elif result == 1:  # 歪了
             down_times += 1
-            total += a
+            total += a  # 歪了的抽数也要算进总成本里
             break
+
 
 # ---------- 主程序 ----------
 if __name__ == "__main__":
-    trials = 10_000
+    # 模拟 1,000,000 次出金以获得极其精准的统计学期望
+    trials = 1_000_000
     for _ in range(trials):
         one_trial()
-    print(f"模拟 {trials} 次")
-    print(f"UP 次数: {up_times}, 歪次数: {down_times}")
-    print(f"平均每个 UP 五星需要抽数: {total / up_times:.2f}")
+
+    print(f"--- 捕获明光机制模拟结果 ---")
+    print(f"模拟总出金次数: {trials}")
+    print(f"获得 UP 次数: {up_times} | 歪的次数: {down_times}")
+
+    # 核心数据计算
+    actual_up_rate = (up_times / trials) * 100
+    avg_per_up = total / up_times
+
+    print(f"出金中 UP 的综合占比: {actual_up_rate:.2f}%")
+    print(f"平均每个 UP 五星需要抽数: {avg_per_up:.2f} 抽")#.2f代表精确到2位 使用f“{}形式为格式化字符串的意思
