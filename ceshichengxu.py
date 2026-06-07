@@ -21,7 +21,7 @@
 #notx\ ifx=false notx=true 反之亦然
 #a=12;b=24
 #print(a and b,a or b,not a,not b)
-#位运算符
+#@@位运算符
 #成员运算符  in 或者not in 身份运算 is或者not is
 #print(3.002//3.1) 结果：0.0
 #print(type(1),type("a"),type(1.2)) 用type判断数值类型
@@ -330,98 +330,153 @@
 #
 import random
 
-a = 0  # 保底计数（已抽数）
-b = 0  # 大保底标记，1 表示下一抽必出 UP
-up_times = 0  # 累计 UP 次数
-down_times = 0  # 累计歪的次数
-total = 0  # 累计总抽数（包含了所有歪和大保底的抽数）
+# a = 0          # 保底计数（已抽数）
+# b = 0          # 大保底标记，1 表示下一抽必出 UP
+# up_times = 0   # 累计 UP 次数
+# down_times = 0 # 累计歪的次数
+# total = 0      # 累计总抽数
+import random
+import sys
 
-# 新增：捕获明光所需的“连续歪小保底”计数器
-lose_streak = 0
+
+import random
 
 
-def posb():
-    """判断出金结果（严谨模拟捕获明光机制）"""
-    global b, lose_streak
+# ---------- 您的原代码（一字不改） ----------
+class chouka:
+    """这是在进行抽卡模拟"""
 
-    # 1. 如果手里有大保底，100% 出 UP
-    # 注意：消耗大保底不属于“小保底判定”，不触发也不重置明光计数器
-    if b == 1:
-        b = 0
-        return 2
+    def __init__(self):
+        self.baodi_xiao = 0
+        self.baodi_da = 0
+        self.up_times = 0
+        self.down_times = 0
+        self.total = 0
 
-    # 2. 如果是小保底，根据【连续歪小保底的次数】决定本次胜率
-    # 这里的概率基于大数据逆向的明光递增模型
-    if lose_streak == 0:
-        win_rate = 0.504  # 第一次小保底，综合微幅提升
-    elif lose_streak == 1:
-        win_rate = 0.714  # 连续第二次小保底，胜率大增
-    elif lose_streak == 2:
-        win_rate = 0.918  # 连续第三次小保底，胜率极高
+    def posbaodi_da(self):
+        """判断是否歪，返回 1（歪）或 2（UP）"""
+        if self.baodi_da == 1:               # 大保底直接出 UP
+            self.baodi_da = 0
+            return 2
+        if random.randint(1, 2) == 1:   # 50% 歪
+            self.baodi_da = 1
+            return 1
+        else:
+            self.baodi_da = 0
+            return 2
+
+    def posbaodi_xiao(self):
+        """单抽，返回 0(没出五星)、1(歪)、2(UP)"""
+        self.baodi_xiao = self.baodi_xiao + 1
+        if self.baodi_xiao == 90:               # 硬保底
+            return self.posbaodi_da()
+
+        if self.baodi_xiao <= 73:               # 73 抽及以前，基础概率 0.6%
+            if random.randint(1, 1000) <= 6:
+                return self.posbaodi_da()
+        else:                     # 74 抽开始概率线性递增
+            prob = 6 + 60 * (self.baodi_xiao - 73)
+            if random.randint(1, 1000) <= prob:
+                return self.posbaodi_da()
+        return 0
+
+    def one_trial(self):
+        """进行一次试验：一直抽直到出一个五星"""
+        while True:
+            result = self.posbaodi_xiao()
+            if result == 2:         # UP
+                self.up_times += 1
+                self.total += self.baodi_xiao
+                self.baodi_xiao = 0
+                break
+            elif result == 1:       # 歪
+                self.down_times += 1
+                self.total += self.baodi_xiao
+                self.baodi_xiao = 0
+                break
+
+    def run_times(self, times):
+        for i in range(times):
+            self.one_trial()
+# ---------- 原代码结束 ----------
+
+
+def print_result(step, code, pity):
+    """根据抽卡结果打印彩色信息（五星金，其他蓝色）"""
+    if code == 2:
+        print(f"\033[33m第{step}抽 ★★★★★ 获得UP五星！ (当前保底计数:{pity})\033[0m")
+    elif code == 1:
+        print(f"\033[33m第{step}抽 ★★★★★ 获得常驻五星 (歪了) (当前保底计数:{pity})\033[0m")
     else:
-        win_rate = 1.000  # 连续第四次小保底，100% 保底（触发明光）
-
-    # 掷骰子决定是否拿到 UP
-    if random.random() < win_rate:
-        # 成功拿到 UP（无论是自己赢的还是被明光救回来的）
-        b = 0
-        lose_streak = 0  # 拿到 UP 后，连歪计数器清零
-        return 2
-    else:
-        # 还是歪了
-        b = 1  # 下一次变成大保底
-        lose_streak += 1  # 连歪层数 +1
-        return 1
+        pass
 
 
-def posa():
-    """单抽，返回 0(没出)、1(歪)、2(UP)"""
-    global a
-    a += 1
-    if a == 90:  # 硬保底
-        return posb()
 
-    if a <= 73:  # 73 抽及以前，基础概率 0.6%
-        if random.random() < 0.006:
-            return posb()
-    else:  # 74 抽开始概率线性递增
-        # 74抽开始，每抽增加 6% 概率
-        prob = 0.006 + 0.06 * (a - 73)
-        if random.random() < prob:
-            return posb()
-    return 0
+def interactive():
+    gacha = chouka()
+    print("=" * 50)
+    print("原神抽卡模拟器 (基于您的 chouka 类)")
+    print("命令：输入抽卡次数(正整数)  |  r 重置进度  |  q 退出")
+    print("提示：五星概率0.6%，74抽后递增，90抽硬保底")
+    print("=" * 50)
 
+    total_wishes = 0          # 记录本次会话的总抽卡次数
+    five_star_count = 0       # 记录出了多少五星（包括歪和UP）
+    up_count = 0              # UP五星次数
 
-def one_trial():
-    """进行一次试验：一直抽直到出一个五星"""
-    global a, b, up_times, down_times, total
-    a = 0  # 重置当前出金所需的抽数
     while True:
-        result = posa()
-        if result == 2:  # 出了 UP
-            up_times += 1
-            total += a  # 累加抽数
+        cmd = input("\n> ").strip().lower()
+        if cmd == 'q':
+            print("感谢使用，再见！")
             break
-        elif result == 1:  # 歪了
-            down_times += 1
-            total += a  # 歪了的抽数也要算进总成本里
-            break
+        elif cmd == 'r':
+            # 重置：重新实例化对象，清空统计变量
+            gacha = chouka()
+            total_wishes = 0
+            five_star_count = 0
+            up_count = 0
+            print("✓ 已重置保底、UP计数和抽卡记录")
+            continue
+
+        # 尝试解析为整数（抽卡次数）
+        try:
+            num = int(cmd)
+            if num <= 0:
+                print("抽卡次数必须是正整数")
+                continue
+        except ValueError:
+            print("无效输入，请输入正整数抽卡次数、r 或 q")
+            continue
+
+        print(f"\n开始 {num} 连抽...")
+        for i in range(1, num + 1):
+            # 重要修复：原 posbaodi_xiao 不会自动重置 baodi_xiao，需要手动重置
+            result = gacha.posbaodi_xiao()
+            # 获取当前的五星保底计数（已经更新后的值，即本次抽卡后的累计数）
+            pity = gacha.baodi_xiao
+            print_result(total_wishes + i, result, pity)
+
+            # 如果出了五星（result != 0），必须重置保底计数器，否则保底会错误累积
+            if result != 0:
+                gacha.baodi_xiao = 0
+                # 更新统计
+                five_star_count += 1
+                if result == 2:
+                    up_count += 1
+
+        total_wishes += num
+
+        # 输出本次抽卡后的简要统计
+        print("\n--- 当前统计 ---")
+        print(f"累计抽卡: {total_wishes}")
+        print(f"累计五星: {five_star_count}  (UP: {up_count}, 歪: {five_star_count - up_count})")
+        if five_star_count > 0:
+            avg = total_wishes / five_star_count
+            print(f"平均每 {avg:.1f} 抽出一个五星")
+        print(f"当前五星保底计数: {gacha.baodi_xiao} / 90")
+        print(f"当前大保底状态: {'已触发（下次必UP）' if gacha.baodi_da == 1 else '未触发（小保底）'}")
+        print("----------------")
 
 
-# ---------- 主程序 ----------
 if __name__ == "__main__":
-    # 模拟 1,000,000 次出金以获得极其精准的统计学期望
-    trials = 1_000_000
-    for _ in range(trials):
-        one_trial()
-
-    print(f"--- 捕获明光机制模拟结果 ---")
-    print(f"模拟总出金次数: {trials}")
-    print(f"获得 UP 次数: {up_times} | 歪的次数: {down_times}")
-
-    # 核心数据计算
-    actual_up_rate = (up_times / trials) * 100
-    avg_per_up = total / up_times
-
-    print(f"出金中 UP 的综合占比: {actual_up_rate:.2f}%")
-    print(f"平均每个 UP 五星需要抽数: {avg_per_up:.2f} 抽")#.2f代表精确到2位 使用f“{}形式为格式化字符串的意思
+    interactive()
